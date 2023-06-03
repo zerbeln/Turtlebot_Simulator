@@ -46,7 +46,7 @@ def run_visualizer(width, height, tb_trajectory, target):
 if __name__ == "__main__":
     height = 10  # meters
     width = 10  # meters
-    time_steps = 500
+    time_steps = 100
     tb_trajectory = []  # Trajectory of bot
 
     tb = TurtleBot()

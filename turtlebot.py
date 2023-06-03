@@ -9,11 +9,12 @@ class TurtleBot:
         self.lidar_data = np.zeros(360)  # scans 360 degree radius
         self.resolution = 1  # degrees
         self.sensitivity = 100  # how many intervals each lidar beam is broken into (for "ray tracing")
-        self.scan_dist = 10  # m
-        self.max_vel = 0.3  # m/s
-        self.max_turn = 5  # deg/s
+        self.scan_dist =  3.5 # m
+        self.max_vel = 0.22  # m/s
+        self.max_turn = 2.84 # rad/s
         self.speed = 0.1  # m/s
         self.heading = 0  # robot heading with respect to global frame (degrees)
+        self.turn_p = 0.003 # Proprtional constant for Proportional control for turning
 
     def lidar_scan(self, env):
         """
@@ -54,12 +55,40 @@ class TurtleBot:
         """
         Robot turns towards object
         """
-        object_direction = np.argmin(self.lidar_data)  # Closes ping in lidar scan
+        # The index of the poi in the lidar scan is the nearest range
+        poi_ind = np.argmin(self.lidar_data)  # Closes ping in lidar scan
 
-        if 0 < object_direction <= 180:
-            self.heading += self.max_turn
-        elif 180 < object_direction < 360:
-            self.heading -= self.max_turn
+        # Move poi_ind from [0,360] frame to [-180,180] frame
+        poi_ind_adjusted = poi_ind - 180
+
+        # Calculate angle difference (degrees)
+        if poi_ind_adjusted >= 0:
+            angle_diff = poi_ind_adjusted-180
+        else:
+            angle_diff = 180+poi_ind_adjusted
+
+        # Threshold (degrees) for when the robot can stop the turn and just drive straight
+        diff_threshold = 2
+
+        # If we're within the threshold, then stop turning
+        if abs(angle_diff) <= diff_threshold:
+            turn_rad = 0.
+        # Else outside the threshold. Calculate turn
+        else:
+            # Calculate turn
+            turn_rad = angle_diff*self.turn_p
+
+            # Bound based on max velocity
+            if turn_rad > self.max_turn:
+                turn_rad = self.max_turn
+            elif turn_rad < -self.max_turn:
+                turn_rad = - self.max_turn
+
+        # Heading is in degrees.
+        # I need to convert radians to degrees before adding to heading
+        turn_deg = turn_rad*57.2958
+
+        self.heading += turn_deg
 
     def robot_drive(self):
         """
