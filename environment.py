@@ -10,7 +10,7 @@ class BotEnvironment:
         Set the position for the target the turtlebot must navigate towards
         """
 
-        self.target = [5, 5, 0.5]  # x, y, r  (meters)
+        self.target = [2, 2, 0.5]  # x, y, r  (meters)
 
     def set_robot_position(self):
         """
