@@ -3,9 +3,10 @@ from environment import BotEnvironment
 import math
 import turtle
 import time
+import numpy as np
 
 
-def run_visualizer(width, height, tb_trajectory, target):
+def run_visualizer(width, height, tb_trajectory, target, hazard=None):
     # Define Screen parameters
     screen_height = width * 50
     screen_width = height * 50
@@ -17,13 +18,27 @@ def run_visualizer(width, height, tb_trajectory, target):
 
     # Define Target
     tg = turtle.Turtle()
-    tg.color("red")
+    tg.color("green")
     tg.shape("circle")
     tg.shapesize(15/20)
+    tg.penup()
     tx = ((target[0]/width) * screen_width) - (screen_width/2)
     ty = ((target[1]/height) * screen_height) - (screen_height/2)
     tg.goto(tx, ty)
     tg.stamp()
+
+    # Define hazard
+    if hazard is not None:
+        haz = turtle.Turtle()
+        haz.color("red")
+        haz.shape("circle")
+        haz.shapesize(25 / 20)
+        haz.penup()
+        hx = ((hazard[0] / width) * screen_width) - (screen_width / 2)
+        hy = ((hazard[1] / height) * screen_height) - (screen_height / 2)
+        haz.goto(hx, hy)
+        haz.stamp()
+
 
     # Define Turtlebot
     tb = turtle.Turtle()
@@ -46,7 +61,7 @@ def run_visualizer(width, height, tb_trajectory, target):
 if __name__ == "__main__":
     height = 10  # meters
     width = 10  # meters
-    time_steps = 100
+    time_steps = 50
     tb_trajectory = []  # Trajectory of bot
 
     tb = TurtleBot()
@@ -54,26 +69,25 @@ if __name__ == "__main__":
 
     env.set_target_position()
     env.set_robot_position()
+    env.set_hazard_position()
     env.turtlebot.lidar_scan(env)
-    tb_trajectory.append(env.turtlebot.loc)
+    tb_trajectory.append(env.turtlebot.robot_state)
 
-    x_dist = env.turtlebot.loc[0] - env.target[0]
-    y_dist = env.turtlebot.loc[1] - env.target[1]
+    x_dist = env.turtlebot.robot_state[0] - env.target[0]
+    y_dist = env.turtlebot.robot_state[1] - env.target[1]
     total_dist = math.sqrt(x_dist**2 + y_dist**2)
-    # print("Distance From Target: ", total_dist)
 
     for t in range(time_steps):
         env.turtlebot.robot_turn()
         env.turtlebot.robot_drive()
-        tb_trajectory.append(env.turtlebot.loc)
+        tb_trajectory.append(env.turtlebot.robot_state)
         env.turtlebot.lidar_scan(env)
 
-        x_dist = env.turtlebot.loc[0] - env.target[0]
-        y_dist = env.turtlebot.loc[1] - env.target[1]
+        x_dist = env.turtlebot.robot_state[0] - env.target[0]
+        y_dist = env.turtlebot.robot_state[1] - env.target[1]
         total_dist = math.sqrt(x_dist ** 2 + y_dist ** 2)
-        # print("Distance From Target: ", total_dist)
 
         if total_dist < env.target[2]:
             break
 
-    run_visualizer(width, height, tb_trajectory, env.target)
+    run_visualizer(width, height, tb_trajectory, env.target, hazard=env.hazard)

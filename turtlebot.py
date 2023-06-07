@@ -4,25 +4,24 @@ import math
 
 class TurtleBot:
     def __init__(self):
-        self.loc = [0, 0]  # Current position of robot
-        self._iloc = [0, 0]  # Initial position of robot (used for reset)
+        self.robot_state = [0, 0, 0]  # Current position of robot [x, y, theta]
+        self._istate = [0, 0, 0]  # Initial position of robot (used for reset)
         self.lidar_data = np.zeros(360)  # scans 360 degree radius
         self.resolution = 1  # degrees
         self.sensitivity = 100  # how many intervals each lidar beam is broken into (for "ray tracing")
-        self.scan_dist =  3.5 # m
+        self.scan_dist = 3.5  # m
         self.max_vel = 0.22  # m/s
-        self.max_turn = 2.84 # rad/s
+        self.max_turn = 2.84  # rad/s
         self.speed = 0.1  # m/s
-        self.heading = 0  # robot heading with respect to global frame (degrees)
-        self.turn_p = 0.003 # Proprtional constant for Proportional control for turning
+        self.turn_p = 0.003  # Proportional constant for Proportional control for turning
 
     def lidar_scan(self, env):
         """
         Robot scans environment to collect data
         """
         # Robot position
-        xo = self.loc[0]
-        yo = self.loc[1]
+        xo = self.robot_state[0]
+        yo = self.robot_state[1]
 
         # Target position
         xt = env.target[0]
@@ -36,8 +35,8 @@ class TurtleBot:
             for i in range(self.sensitivity):
                 # Determine current scan depth
                 s_dist = i * (self.scan_dist/self.sensitivity)
-                xi = s_dist*math.cos((self.heading+scan_angle)*math.pi/180)
-                yi = s_dist*math.sin((self.heading+scan_angle)*math.pi/180)
+                xi = s_dist*math.cos((self.robot_state[2]+scan_angle)*math.pi/180)
+                yi = s_dist*math.sin((self.robot_state[2]+scan_angle)*math.pi/180)
 
                 # Look for "contact" with target
                 scan_loc = [xo+xi, yo+yi]  # Scan "waypoint"
@@ -56,7 +55,7 @@ class TurtleBot:
         Robot turns towards object
         """
         # The index of the poi in the lidar scan is the nearest range
-        poi_ind = np.argmin(self.lidar_data)  # Closes ping in lidar scan
+        poi_ind = np.argmin(self.lidar_data)  # Closest ping in lidar scan
 
         # Move poi_ind from [0,360] frame to [-180,180] frame
         poi_ind_adjusted = poi_ind - 180
@@ -88,19 +87,28 @@ class TurtleBot:
         # I need to convert radians to degrees before adding to heading
         turn_deg = turn_rad*57.2958
 
-        self.heading += turn_deg
+        self.robot_state[2] += turn_deg
+
+    def get_counterfactual(self, counterfactual):
+        """
+        Turtlebot gets counterfactual from the supervisor
+        """
+        sensor_data = self.lidar_data.copy()
+        self.lidar_data = np.add(sensor_data, counterfactual)
+        self.lidar_data[self.lidar_data < 0] = 0.1  # Replace negative values
 
     def robot_drive(self):
         """
         Robot drives forward at current velocity and heading
         """
-        xo = self.loc[0]
-        yo = self.loc[1]
+        x_o = self.robot_state[0]
+        y_o = self.robot_state[1]
+        theta_o = self.robot_state[2]
 
-        delta_x = self.speed * math.cos(self.heading*math.pi/180)
-        delta_y = self.speed * math.sin(self.heading*math.pi/180)
+        delta_x = self.speed * math.cos(theta_o*math.pi/180)
+        delta_y = self.speed * math.sin(theta_o*math.pi/180)
 
-        xt = xo + delta_x
-        yt = yo + delta_y
+        xt = x_o + delta_x
+        yt = y_o + delta_y
 
-        self.loc = [xt, yt]
+        self.robot_state = [xt, yt, theta_o]
